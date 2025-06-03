@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head>
+    <title>Hasil Analisis Plagiarisme</title>
+</head>
+<body>
+    <h1>Hasil Analisis Plagiarisme</h1>
+    <h2>Tabel Kemiripan Antar Dokumen</h2>
+    {{ similarity_table | safe }}
+
+    <h2>Kemiripan Kata</h2>
+    {{ similar_words_tables | safe }}
+
+    <button><a href="/">Kembali ke beranda</a></button>
+</body>
+</html>
