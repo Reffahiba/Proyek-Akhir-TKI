@@ -2,7 +2,6 @@ import re
 import pandas as pd
 import pdfplumber
 import logging
-import nltk
 from itertools import combinations
 from flask import Flask, request, render_template
 from sklearn.feature_extraction.text import TfidfVectorizer
