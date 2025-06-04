@@ -2,6 +2,7 @@ import re
 import pandas as pd
 import pdfplumber
 import logging
+import time
 from flask import Flask, request, render_template
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -41,6 +42,8 @@ def index():
 @app.route('/analyse', methods=['POST'])
 
 def analyse():
+    start_time = time.time()
+
     if 'files' not in request.files:
         return "Tidak ada file yang diunggah."
     
@@ -87,30 +90,30 @@ def analyse():
     if len(doc_names) < 2:
         similar_words_tables_html += "<p class='text-gray-600 mt-6 mb-4'>Unggah minimal dua dokumen untuk melihat kemiripan kata.</p>"
     else:
-        doc_reference_name = doc_names[0]
-        tfidf_doc_reference = tfidf_matrix[0].toarray().flatten()
+        doc_main_name = doc_names[0]
+        tfidf_doc_main = tfidf_matrix[0].toarray().flatten()
 
         for j in range(1, len(doc_names)):
-            doc_other_name = doc_names[j]
-            tfidf_doc_other = tfidf_matrix[j].toarray().flatten()
+            doc_reference_name = doc_names[j]
+            tfidf_doc_reference = tfidf_matrix[j].toarray().flatten()
 
             common_trigrams = []
             for k, feature in enumerate(feature_names):
-                if tfidf_doc_reference[k] > 0.01 and tfidf_doc_other[k] > 0.01:
+                if tfidf_doc_main[k] > 0.01 and tfidf_doc_reference[k] > 0.01:
                     common_trigrams.append({
                         'Trigram': feature,
-                        'Skor TF-IDF Dokumen Referensi': round(tfidf_doc_reference[k], 4),
-                        'Skor TF-IDF Dokumen Lain': round(tfidf_doc_other[k], 4)
+                        'Skor TF-IDF Dokumen Utama': round(tfidf_doc_main[k], 4),
+                        'Skor TF-IDF Dokumen Referensi': round(tfidf_doc_reference[k], 4)
                     })
             
             common_trigrams_df = pd.DataFrame(common_trigrams)
             if not common_trigrams_df.empty:
                 common_trigrams_df['Rata-rata Skor'] = (
-                    (common_trigrams_df['Skor TF-IDF Dokumen Referensi'] + common_trigrams_df['Skor TF-IDF Dokumen Lain']) / 2
+                    (common_trigrams_df['Skor TF-IDF Dokumen Utama'] + common_trigrams_df['Skor TF-IDF Dokumen Referensi']) / 2
                 )
                 common_trigrams_df = common_trigrams_df.sort_values(by='Rata-rata Skor', ascending=False).head(10)
 
-                similar_words_tables_html += f"<h3 class='text-xl font-semibold mt-6 mb-2 text-gray-800'>Kemiripan antara '{doc_reference_name}' dan '{doc_other_name}'</h3>"
+                similar_words_tables_html += f"<h3 class='text-xl font-semibold mt-6 mb-2 text-gray-800'>Kemiripan antara '{doc_main_name}' dan '{doc_reference_name}'</h3>"
                 similar_words_tables_html += "<div class='overflow-x-auto rounded-lg shadow mb-4'>"
                 similar_words_tables_html += common_trigrams_df.to_html(
                     index=False,
@@ -118,12 +121,16 @@ def analyse():
                 )
                 similar_words_tables_html += "</div>"
             else:
-                similar_words_tables_html += f"<p class='text-gray-600 mt-6 mb-4'>Tidak ditemukan trigram signifikan yang mirip antara '{doc1_name}' dan '{doc2_name}'.</p>"
+                similar_words_tables_html += f"<p class='text-gray-600 mt-6 mb-4'>Tidak ditemukan trigram signifikan yang mirip antara '{doc_main_name}' dan '{doc_reference_name}'.</p>"
+
+    end_time = time.time()
+    duration = round(end_time - start_time, 2)
 
     return render_template(
         'hasil.html',
         similarity_table=similarity_df_html,
-        similar_words_tables=similar_words_tables_html
+        similar_words_tables=similar_words_tables_html,
+        duration=duration
     )
 
 if __name__ == '__main__':
