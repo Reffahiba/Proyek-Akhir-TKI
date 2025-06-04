@@ -62,7 +62,6 @@ def analyse():
                     documents[file.filename] = preprocess(full_text)
                 else:
                     print(f"Peringatan: Tidak ada teks yang diekstrak dari {file.filename}")
-
         except Exception as e:
             print(f"Gagal memproses file {file.filename}: {e}")
     
@@ -78,12 +77,15 @@ def analyse():
     # Cosine similarity matrix
     similarity_matrix = cosine_similarity(tfidf_matrix).round(5)
 
-    # Tampilkan sebagai DataFrame
+    # Tampilkan sebagai DataFrame dan tambahkan class Tailwind
     similarity_df = pd.DataFrame(similarity_matrix, index=doc_names, columns=doc_names)
-    similarity_df_html = similarity_df.to_html(classes="table table-striped table-bordered")
-    similar_words_tables_html = ""
+    similarity_df_html = similarity_df.to_html(
+        classes="min-w-full divide-y divide-gray-200 text-sm text-left text-gray-700 border border-gray-300"
+    )
 
+    similar_words_tables_html = ""
     feature_names = vectorizer.get_feature_names_out()
+
     for i, j in combinations(range(len(doc_names)), 2):
         doc1_name = doc_names[i]
         doc2_name = doc_names[j]
@@ -93,7 +95,7 @@ def analyse():
 
         common_trigrams = []
         for k, feature in enumerate(feature_names):
-            if tfidf_doc1[k] > 0.01 and tfidf_doc2[k] > 0.01: 
+            if tfidf_doc1[k] > 0.01 and tfidf_doc2[k] > 0.01:
                 common_trigrams.append({
                     'Trigram': feature,
                     'Skor TF-IDF Dokumen 1': round(tfidf_doc1[k], 4),
@@ -102,19 +104,26 @@ def analyse():
         
         common_trigrams_df = pd.DataFrame(common_trigrams)
         if not common_trigrams_df.empty:
-            common_trigrams_df['Rata-rata Skor'] = (common_trigrams_df['Skor TF-IDF Dokumen 1'] + common_trigrams_df['Skor TF-IDF Dokumen 2']) / 2
+            common_trigrams_df['Rata-rata Skor'] = (
+                (common_trigrams_df['Skor TF-IDF Dokumen 1'] + common_trigrams_df['Skor TF-IDF Dokumen 2']) / 2
+            )
             common_trigrams_df = common_trigrams_df.sort_values(by='Rata-rata Skor', ascending=False).head(10)
 
-            similar_words_tables_html += f"<h3 class='text-xl font-semibold mt-6 mb-2'>Kemiripan antara '{doc1_name}' dan '{doc2_name}'</h3>"
+            similar_words_tables_html += f"<h3 class='text-xl font-semibold mt-6 mb-2 text-gray-800'>Kemiripan antara '{doc1_name}' dan '{doc2_name}'</h3>"
             similar_words_tables_html += "<div class='overflow-x-auto rounded-lg shadow mb-4'>"
-            similar_words_tables_html += common_trigrams_df.to_html(index=False, classes="table table-striped table-bordered")
+            similar_words_tables_html += common_trigrams_df.to_html(
+                index=False,
+                classes="min-w-full divide-y divide-gray-200 text-sm text-left text-gray-700 border border-gray-300"
+            )
             similar_words_tables_html += "</div>"
         else:
             similar_words_tables_html += f"<p class='text-gray-600 mt-6 mb-4'>Tidak ditemukan trigram signifikan yang mirip antara '{doc1_name}' dan '{doc2_name}'.</p>"
 
-    return render_template('hasil.html', # Buat file results.html
-                            similarity_table = similarity_df_html,
-                            similar_words_tables = similar_words_tables_html)
+    return render_template(
+        'hasil.html',
+        similarity_table=similarity_df_html,
+        similar_words_tables=similar_words_tables_html
+    )
 
 if __name__ == '__main__':
     app.run(debug=True, port=5500)
